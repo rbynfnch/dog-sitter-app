@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment variables -- contains your Supabase keys, never commit this
+.env.local
+.env.*.local
+
+# Editor/OS
+.DS_Store
+.vscode/
+*.log
