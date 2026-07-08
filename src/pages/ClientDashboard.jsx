@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import Calendar from '../components/Calendar';
 import RequestModal from '../components/RequestModal';
 import SignatureForm from '../components/SignatureForm';
+import ContractLink from '../components/ContractLink';
 import MessageThread from '../components/MessageThread';
 
 const STATUS_LABEL = {
@@ -96,6 +97,7 @@ export default function ClientDashboard() {
                   Approved! Payment instructions and Venmo details will be sent by email — see TODO in code for wiring this up.
                 </p>
                 <SignatureForm booking={b} dog={b.dogs} client={profile} />
+                <ContractLink bookingId={b.id} />
               </div>
             )}
             {b.status === 'declined' && b.decline_reason && (

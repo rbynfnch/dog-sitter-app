@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { pdf } from '@react-pdf/renderer';
 import { supabase } from '../lib/supabaseClient';
 import ContractDocument from '../pdf/ContractDocument';
@@ -6,7 +6,7 @@ import ContractDocument from '../pdf/ContractDocument';
 // Shown once a booking is approved. Two paths:
 //  A) type your name -> we generate + store the signed PDF right away
 //  B) download a blank copy, sign it on paper, then upload the scan
-// Either way the result is the same: a row in `contracts` with a pdf_url,
+// Either way the result is the same: a row in `contracts` with a pdf_path,
 // generated/stored once and never regenerated (so it can't silently drift
 // if the dog's info changes later).
 export default function SignatureForm({ booking, dog, client }) {
@@ -16,7 +16,19 @@ export default function SignatureForm({ booking, dog, client }) {
   const [uploadFile, setUploadFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [checked, setChecked] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => { checkExisting(); }, [booking.id]);
+
+  async function checkExisting() {
+    const { data } = await supabase
+      .from('contracts').select('id, pdf_path').eq('booking_id', booking.id).limit(1).maybeSingle();
+    // Only count it as "done" if there's an actual usable file path --
+    // a legacy row from before pdf_path existed shouldn't block re-signing.
+    if (data?.pdf_path) setDone(true);
+    setChecked(true);
+  }
 
   async function uploadAndSave(blob, method, signedName) {
     const path = `${booking.id}-${Date.now()}.pdf`;
@@ -24,14 +36,16 @@ export default function SignatureForm({ booking, dog, client }) {
       contentType: 'application/pdf',
     });
     if (uploadError) throw uploadError;
-    const { data: urlData } = supabase.storage.from('contracts').getPublicUrl(path);
 
+    // The bucket is private -- we store the path, and generate a fresh
+    // signed (temporary) URL on demand whenever someone wants to view it
+    // (see ContractLink.jsx), rather than a permanent public URL.
     const { error: insertError } = await supabase.from('contracts').insert({
       booking_id: booking.id,
       method,
       signed_name: signedName || null,
       signed_at: new Date().toISOString(),
-      pdf_url: urlData.publicUrl,
+      pdf_path: path,
     });
     if (insertError) throw insertError;
   }
@@ -75,6 +89,7 @@ export default function SignatureForm({ booking, dog, client }) {
     setSaving(false);
   }
 
+  if (!checked) return null;
   if (done) return <p style={{ color: 'var(--teal)', fontWeight: 600 }}>Contract on file. Thank you!</p>;
 
   return (

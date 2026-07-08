@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import Calendar from '../components/Calendar';
+import ContractLink from '../components/ContractLink';
 
 // Sitter's view: manage blocked dates, and move each booking through the
 // meet-and-greet gate before it can ever become 'approved' (the only status
@@ -239,6 +240,8 @@ export default function SitterDashboard() {
                 </button>
               )}
             </div>
+
+            {b.status === 'approved' && <ContractLink bookingId={b.id} />}
 
             {decliningId === b.id && (
               <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
